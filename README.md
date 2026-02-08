@@ -19,7 +19,7 @@ Sui Shot flips the model:
 - yield-funded rewards
 - transparent on-chain accounting
 
-![Sui Shot](assets/workflow-suishot.png)
+![Sui Shot](assets/workflow-suishot.jpg)
 
 ## Why Sui Is Perfect for This
 
