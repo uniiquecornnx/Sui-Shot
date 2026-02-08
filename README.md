@@ -1,4 +1,4 @@
-# Sui Shot
+# 🎯 Sui Shot
 
 Take a shot, not the risk.
 
@@ -77,14 +77,14 @@ Common behavior in all modes:
 ## Move Contract Structure
 
 ### Core Module
-Path: `/Users/devisha/Projects/sui-zeroloss-prediction-market/sources/zero_loss_prediction_market.move`
+Path: `/sources/zero_loss_prediction_market.move`
 
 Shared objects:
 - `PredictionMarket` (global protocol state)
 - `RoundMetadata` (question + metadata object per round)
 
 ### Supporting Module
-Path: `/Users/devisha/Projects/sui-zeroloss-prediction-market/sources/mock_yield_engine.move`
+Path: `/sources/mock_yield_engine.move`
 
 Used for extra testing utilities. Main product flow now uses strategy functions inside `zero_loss_prediction_market`.
 
@@ -153,19 +153,9 @@ Moves accrued strategy yield into a selected round’s prize pool.
 
 ## Frontend Setup
 
-Path: `/Users/devisha/Projects/sui-zeroloss-prediction-market/frontend`
+Path: `/sui-zeroloss-prediction-market/frontend`
 
 Create `.env`:
-
-```env
-VITE_SUI_NETWORK=testnet
-VITE_PACKAGE_ID=0xd617a94662b3790eaaa1dfe31e57eb8ce16e94c92ddc0d3f149d7a5615354a2c
-VITE_MARKET_ID=0xc4027f480a3474d02bbdb21dc2690dd7f840c50811b14b23ed4d90b8f4c81377
-VITE_MOCK_YIELD_ENGINE_ID=0x222f88c5628cdbf81b4bd305a0367c986333d6155e7f020685a702d4d68df0b7
-VITE_COINGECKO_NETWORK=sui-network
-VITE_COINGECKO_API_BASE_URL=https://api.coingecko.com/api/v3/onchain
-VITE_COINGECKO_API_KEY=YOUR_COINGECKO_KEY
-```
 
 Run:
 
@@ -184,15 +174,13 @@ sui client publish --gas-budget 100000000
 ```
 
 If publish says package already published:
-- remove testnet entry from `/Users/devisha/Projects/sui-zeroloss-prediction-market/Published.toml`
+- remove testnet entry from `/sui-zeroloss-prediction-market/Published.toml`
 - publish again
-
-Then update frontend `.env` IDs and restart app.
 
 ## Exact End-to-End Test Sequence
 
 A full tested script is available at:
-`/Users/devisha/Projects/sui-zeroloss-prediction-market/scripts/testnet_flow.sh`
+`/scripts/testnet_flow.sh`
 
 It runs:
 1. create round
