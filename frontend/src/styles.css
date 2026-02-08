@@ -156,6 +156,24 @@ h3 {
   justify-content: space-between;
 }
 
+.card-top-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.dismiss-btn {
+  border: 1px solid var(--line);
+  background: #fff;
+  color: var(--soft-ink);
+  border-radius: 999px;
+  width: 1.55rem;
+  height: 1.55rem;
+  line-height: 1;
+  font-size: 1rem;
+  cursor: pointer;
+}
+
 .badge {
   display: inline-flex;
   background: #fff;

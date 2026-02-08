@@ -7,6 +7,7 @@ import type { OnchainMarket } from '../lib/useOnchainMarkets';
 type Props = {
   market: OnchainMarket;
   onRefresh: () => void;
+  onDismiss: () => void;
   myYes: number;
   myNo: number;
   canFundYield: boolean;
@@ -17,7 +18,7 @@ function mistToSui(value: number): string {
   return (value / 1_000_000_000).toFixed(3);
 }
 
-export function MarketCard({ market, onRefresh, myYes, myNo, canFundYield, canSettle }: Props) {
+export function MarketCard({ market, onRefresh, onDismiss, myYes, myNo, canFundYield, canSettle }: Props) {
   const account = useCurrentAccount();
   const { mutateAsync: signAndExecuteTransaction, isPending } = useSignAndExecuteTransaction();
   const [betAmount, setBetAmount] = useState('0.1');
@@ -89,7 +90,12 @@ export function MarketCard({ market, onRefresh, myYes, myNo, canFundYield, canSe
     <article className="market-card glass">
       <div className="card-top">
         <span className="badge">Round #{market.roundId}</span>
-        <span className="badge">{cardState}</span>
+        <div className="card-top-actions">
+          <span className="badge">{cardState}</span>
+          <button className="dismiss-btn" onClick={onDismiss} title="Delete card from my view" aria-label="Delete card">
+            ×
+          </button>
+        </div>
       </div>
 
       <h2>{market.question}</h2>

@@ -148,6 +148,11 @@ module prediction_market::zero_loss_prediction_market {
         apr_bps: u64
     }
 
+    public struct AdminTransferred has copy, drop {
+        old_admin: address,
+        new_admin: address
+    }
+
     fun init(ctx: &mut sui::tx_context::TxContext) {
         let admin = ctx.sender();
         let market = PredictionMarket {
@@ -318,6 +323,20 @@ module prediction_market::zero_loss_prediction_market {
         assert_admin(market, ctx);
         market.strategy_apr_bps = apr_bps;
         event::emit(StrategyAprUpdated { apr_bps });
+    }
+
+    public entry fun transfer_admin(
+        market: &mut PredictionMarket,
+        new_admin: address,
+        ctx: &mut sui::tx_context::TxContext,
+    ) {
+        assert_admin(market, ctx);
+        let old_admin = market.admin;
+        market.admin = new_admin;
+        event::emit(AdminTransferred {
+            old_admin,
+            new_admin
+        });
     }
 
     // Simulates deploying principal into an external strategy (SuiLend adapter path).
