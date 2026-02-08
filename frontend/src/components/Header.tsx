@@ -13,7 +13,7 @@ export function Header({ activeTab, onTabChange }: Props) {
       <div>
         <p className="eyebrow"></p>
         <h1>🎯 Sui Shot</h1>
-        <p className="sub">Take the shot, not the risk. Win from yield, not from losses.</p>
+        <p className="sub">Take a shot, not the risk. Win from yield, not from losses.</p>
         <div className="tabs">
           <button
             className={`tab-btn ${activeTab === 'markets' ? 'active' : ''}`}

@@ -1,5 +1,6 @@
 import { useCurrentAccount, useSignAndExecuteTransaction } from '@mysten/dapp-kit';
 import { useState } from 'react';
+import { COINGECKO_NETWORK } from '../config/network';
 import { buildCreateRoundTx } from '../lib/tx';
 
 type Props = {
@@ -21,7 +22,6 @@ export function CreateRoundForm({ onRefresh }: Props) {
   const [closeIso, setCloseIso] = useState(defaultCloseIso());
   const [mode, setMode] = useState<'1' | '2' | '3'>('1');
   const [manualSide, setManualSide] = useState<'1' | '2'>('1');
-  const [predictionNetwork, setPredictionNetwork] = useState('sui-network');
   const [predictionTokenAddress, setPredictionTokenAddress] = useState('');
   const [predictionTargetPrice, setPredictionTargetPrice] = useState('1.00');
   const [predictionComparator, setPredictionComparator] = useState<'1' | '2'>('1');
@@ -37,8 +37,8 @@ export function CreateRoundForm({ onRefresh }: Props) {
     }
     if (mode === '2') {
       const px = Number(predictionTargetPrice);
-      if (!predictionNetwork.trim() || !predictionTokenAddress.trim()) {
-        return setStatus('Prediction mode requires network and token address.');
+      if (!predictionTokenAddress.trim()) {
+        return setStatus('Prediction mode requires token address.');
       }
       if (!Number.isFinite(px) || px <= 0) {
         return setStatus('Prediction mode requires valid target price.');
@@ -57,7 +57,7 @@ export function CreateRoundForm({ onRefresh }: Props) {
         BigInt(closeMs),
         m,
         manual as 0 | 1 | 2,
-        m === 2 ? predictionNetwork.trim() : '',
+        m === 2 ? COINGECKO_NETWORK.trim() : '',
         m === 2 ? predictionTokenAddress.trim().toLowerCase() : '',
         targetE6,
         comparator as 0 | 1 | 2,
@@ -73,7 +73,7 @@ export function CreateRoundForm({ onRefresh }: Props) {
   return (
     <section className="panel glass">
       <h3>Create New Lottery Round</h3>
-      <p className="hint">Modes: Random draw, Prediction (future API), or Manual outcome with random winner among matching side.</p>
+      <p className="hint">Modes: Random draw, Prediction, or Manual outcome. Prediction uses your default CoinGecko network from env.</p>
 
       <div className="form-grid">
         <label htmlFor="q">Question</label>
@@ -98,9 +98,6 @@ export function CreateRoundForm({ onRefresh }: Props) {
 
         {mode === '2' ? (
           <>
-            <label htmlFor="pnet">Prediction network (CoinGecko)</label>
-            <input id="pnet" value={predictionNetwork} onChange={(e) => setPredictionNetwork(e.target.value)} />
-
             <label htmlFor="ptok">Token contract address</label>
             <input id="ptok" value={predictionTokenAddress} onChange={(e) => setPredictionTokenAddress(e.target.value)} />
 

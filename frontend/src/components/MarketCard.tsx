@@ -68,7 +68,7 @@ export function MarketCard({ market, onRefresh, myYes, myNo, canFundYield, canSe
     try {
       let outcome: 0 | 1 | 2 = 0;
       if (market.mode === 2) {
-        const price = await fetchTokenUsdPrice(market.predictionNetwork, market.predictionTokenAddress);
+        const price = await fetchTokenUsdPrice(market.predictionTokenAddress);
         const target = market.predictionTargetPriceE6 / 1_000_000;
         const yes =
           market.predictionComparator === 1

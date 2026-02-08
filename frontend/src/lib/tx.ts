@@ -99,6 +99,85 @@ export function buildFundYieldTx(roundId: number, amountMist: bigint) {
   return tx;
 }
 
+export function buildDeployPrincipalToStrategyTx(amountMist: bigint) {
+  assertConfig();
+  const tx = new Transaction();
+  tx.setGasBudget(20_000_000);
+
+  tx.moveCall({
+    target: `${PACKAGE_ID}::${MODULE_NAME}::deploy_principal_to_strategy`,
+    arguments: [tx.object(MARKET_ID), tx.pure.u64(amountMist), tx.object(CLOCK_OBJECT_ID)],
+  });
+
+  return tx;
+}
+
+export function buildRecallPrincipalFromStrategyTx(amountMist: bigint) {
+  assertConfig();
+  const tx = new Transaction();
+  tx.setGasBudget(20_000_000);
+
+  tx.moveCall({
+    target: `${PACKAGE_ID}::${MODULE_NAME}::recall_principal_from_strategy`,
+    arguments: [tx.object(MARKET_ID), tx.pure.u64(amountMist), tx.object(CLOCK_OBJECT_ID)],
+  });
+
+  return tx;
+}
+
+export function buildFundStrategyYieldTx(amountMist: bigint) {
+  assertConfig();
+  const tx = new Transaction();
+  tx.setGasBudget(20_000_000);
+  const [coin] = tx.splitCoins(tx.gas, [tx.pure.u64(amountMist)]);
+
+  tx.moveCall({
+    target: `${PACKAGE_ID}::${MODULE_NAME}::fund_strategy_yield`,
+    arguments: [tx.object(MARKET_ID), coin],
+  });
+
+  return tx;
+}
+
+export function buildAllocateStrategyYieldToRoundTx(roundId: number, amountMist: bigint) {
+  assertConfig();
+  const tx = new Transaction();
+  tx.setGasBudget(25_000_000);
+
+  tx.moveCall({
+    target: `${PACKAGE_ID}::${MODULE_NAME}::allocate_strategy_yield_to_round`,
+    arguments: [tx.object(MARKET_ID), tx.pure.u64(roundId), tx.pure.u64(amountMist), tx.object(CLOCK_OBJECT_ID)],
+  });
+
+  return tx;
+}
+
+export function buildAccrueStrategyYieldTx() {
+  assertConfig();
+  const tx = new Transaction();
+  tx.setGasBudget(15_000_000);
+
+  tx.moveCall({
+    target: `${PACKAGE_ID}::${MODULE_NAME}::accrue_strategy_yield`,
+    arguments: [tx.object(MARKET_ID), tx.object(CLOCK_OBJECT_ID)],
+  });
+
+  return tx;
+}
+
+export function buildSetStrategyAprTx(aprBps: number) {
+  assertConfig();
+  const tx = new Transaction();
+  tx.setGasBudget(15_000_000);
+
+  tx.moveCall({
+    target: `${PACKAGE_ID}::${MODULE_NAME}::set_strategy_apr_bps`,
+    arguments: [tx.object(MARKET_ID), tx.pure.u64(aprBps)],
+  });
+
+  return tx;
+}
+
 export function buildDistributeMockYieldTx(roundId: number, basisPoints: number, maxAmountMist: bigint) {
   assertConfig();
   if (!MOCK_YIELD_ENGINE_ID) {

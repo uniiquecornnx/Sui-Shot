@@ -5,6 +5,10 @@ export const PACKAGE_ID = (import.meta.env.VITE_PACKAGE_ID as string | undefined
 export const MARKET_ID = (import.meta.env.VITE_MARKET_ID as string | undefined) ?? '';
 export const MOCK_YIELD_ENGINE_ID = (import.meta.env.VITE_MOCK_YIELD_ENGINE_ID as string | undefined) ?? '';
 export const COINGECKO_API_KEY = (import.meta.env.VITE_COINGECKO_API_KEY as string | undefined) ?? '';
+export const COINGECKO_NETWORK = (import.meta.env.VITE_COINGECKO_NETWORK as string | undefined) ?? 'sui-network';
+export const COINGECKO_API_BASE_URL =
+  (import.meta.env.VITE_COINGECKO_API_BASE_URL as string | undefined) ??
+  'https://api.coingecko.com/api/v3/onchain';
 
 export const CLOCK_OBJECT_ID = '0x6';
 export const MODULE_NAME = 'zero_loss_prediction_market';

@@ -1,23 +1,36 @@
-import { COINGECKO_API_KEY } from '../config/network';
+import { COINGECKO_API_BASE_URL, COINGECKO_API_KEY, COINGECKO_NETWORK } from '../config/network';
 
-export async function fetchTokenUsdPrice(network: string, tokenAddress: string): Promise<number> {
+export async function fetchTokenUsdPrice(tokenAddress: string, networkOverride?: string): Promise<number> {
   if (!COINGECKO_API_KEY) {
     throw new Error('Missing VITE_COINGECKO_API_KEY in frontend .env');
   }
 
-  const url = `https://pro-api.coingecko.com/api/v3/onchain/simple/networks/${encodeURIComponent(
-    network
-  )}/token_price/${encodeURIComponent(tokenAddress.toLowerCase())}`;
+  const normalizedNetwork = (networkOverride ?? '').trim() || COINGECKO_NETWORK.trim();
+  const normalizedAddress = tokenAddress.trim().toLowerCase();
+  if (!normalizedNetwork) {
+    throw new Error('Missing CoinGecko network. Set VITE_COINGECKO_NETWORK in frontend .env');
+  }
+  if (!normalizedAddress) {
+    throw new Error('Prediction token address is required');
+  }
+
+  const baseUrl = COINGECKO_API_BASE_URL.replace(/\/+$/, '');
+  const url = `${baseUrl}/simple/networks/${encodeURIComponent(
+    normalizedNetwork
+  )}/token_price/${encodeURIComponent(normalizedAddress)}`;
+  const isProHost = baseUrl.includes('pro-api.coingecko.com');
+  const headers: Record<string, string> = { accept: 'application/json' };
+  if (COINGECKO_API_KEY) {
+    headers[isProHost ? 'x-cg-pro-api-key' : 'x-cg-demo-api-key'] = COINGECKO_API_KEY;
+  }
 
   const response = await fetch(url, {
-    headers: {
-      'x-cg-pro-api-key': COINGECKO_API_KEY,
-      accept: 'application/json',
-    },
+    headers,
   });
 
   if (!response.ok) {
-    throw new Error(`CoinGecko request failed (${response.status})`);
+    const body = await response.text();
+    throw new Error(`CoinGecko request failed (${response.status}): ${body.slice(0, 280)}`);
   }
 
   const data = (await response.json()) as {
@@ -25,7 +38,7 @@ export async function fetchTokenUsdPrice(network: string, tokenAddress: string):
   };
 
   const prices = data?.data?.attributes?.token_prices ?? {};
-  const key = Object.keys(prices).find((k) => k.toLowerCase() === tokenAddress.toLowerCase());
+  const key = Object.keys(prices).find((k) => k.toLowerCase() === normalizedAddress);
   if (!key) {
     throw new Error('Token price not found in CoinGecko response');
   }

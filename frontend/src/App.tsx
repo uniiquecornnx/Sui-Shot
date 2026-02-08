@@ -73,7 +73,12 @@ export default function App() {
         ) : activeTab === 'portfolio' ? (
           <PortfolioPanel markets={markets ?? []} portfolio={portfolio} />
         ) : (
-          <StrategyPanel markets={markets ?? []} chainAdmin={chainAdmin ?? ''} />
+          <StrategyPanel
+            markets={markets ?? []}
+            chainAdmin={chainAdmin ?? ''}
+            canManage={canRunAdminActions}
+            onRefresh={refreshAll}
+          />
         )}
       </main>
     </div>
