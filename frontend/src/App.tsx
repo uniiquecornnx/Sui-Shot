@@ -60,7 +60,7 @@ export default function App() {
                   myYes={myByRound[market.roundId]?.yes ?? 0}
                   myNo={myByRound[market.roundId]?.no ?? 0}
                   canFundYield={canRunAdminActions}
-                  chainAdmin={chainAdmin ?? ''}
+                  canSettle={canRunAdminActions}
                 />
               ))}
             </section>
@@ -73,7 +73,7 @@ export default function App() {
             ) : null}
           </>
         ) : activeTab === 'portfolio' ? (
-          <PortfolioPanel markets={markets ?? []} portfolio={portfolio} onRefresh={refreshAll} />
+          <PortfolioPanel markets={markets ?? []} portfolio={portfolio} />
         ) : (
           <StrategyPanel markets={markets ?? []} chainAdmin={chainAdmin ?? ''} />
         )}

@@ -1,0 +1,6 @@
+[package]
+name = "ZeroLossPredictionMarket"
+edition = "2024.beta"
+
+[addresses]
+prediction_market = "0x0"

@@ -84,8 +84,8 @@ export function isYieldFunded(evt: ParsedEvent): boolean {
   );
 }
 
-export function isRoundResolved(evt: ParsedEvent): boolean {
-  if (evt.type.endsWith('::RoundResolved')) return true;
+export function isRoundSettled(evt: ParsedEvent): boolean {
+  if (evt.type.endsWith('::RoundSettled')) return true;
   const j = evt.parsedJson;
   if (!j) return false;
   return (
@@ -94,27 +94,25 @@ export function isRoundResolved(evt: ParsedEvent): boolean {
   );
 }
 
-export function isPrincipalWithdrawn(evt: ParsedEvent): boolean {
-  if (evt.type.endsWith('::PrincipalWithdrawn')) return true;
+export function isPrincipalReturned(evt: ParsedEvent): boolean {
+  if (evt.type.endsWith('::PrincipalReturned')) return true;
   const j = evt.parsedJson;
   if (!j) return false;
   return (
     readField(j, 'round_id', 'roundId') !== undefined &&
-    readField(j, 'side', 'side') !== undefined &&
     readField(j, 'amount', 'amount') !== undefined &&
     readField(j, 'user', 'user') !== undefined
   );
 }
 
-export function isYieldClaimed(evt: ParsedEvent): boolean {
-  if (evt.type.endsWith('::YieldClaimed')) return true;
+export function isRoundPrize(evt: ParsedEvent): boolean {
+  if (evt.type.endsWith('::RoundSettled')) return true;
   const j = evt.parsedJson;
   if (!j) return false;
   return (
     readField(j, 'round_id', 'roundId') !== undefined &&
-    readField(j, 'amount', 'amount') !== undefined &&
-    readField(j, 'user', 'user') !== undefined &&
-    readField(j, 'side', 'side') === undefined
+    readField(j, 'prize_amount', 'prizeAmount') !== undefined &&
+    readField(j, 'winner', 'winner') !== undefined
   );
 }
 

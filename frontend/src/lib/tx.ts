@@ -34,7 +34,12 @@ export function buildPlaceBetTx(roundId: number, side: 1 | 2, amountMist: bigint
   return tx;
 }
 
-export function buildCreateRoundTx(question: string, closeTimestampMs: bigint) {
+export function buildCreateRoundTx(
+  question: string,
+  closeTimestampMs: bigint,
+  mode: 1 | 2 | 3,
+  manualSide: 0 | 1 | 2,
+) {
   assertConfig();
   const tx = new Transaction();
   tx.setGasBudget(30_000_000);
@@ -45,6 +50,26 @@ export function buildCreateRoundTx(question: string, closeTimestampMs: bigint) {
       tx.object(MARKET_ID),
       tx.pure.string(question),
       tx.pure.u64(closeTimestampMs),
+      tx.pure.u8(mode),
+      tx.pure.u8(manualSide),
+      tx.object(CLOCK_OBJECT_ID),
+    ],
+  });
+
+  return tx;
+}
+
+export function buildSettleRoundTx(roundId: number, predictionOutcomeSide: 0 | 1 | 2) {
+  assertConfig();
+  const tx = new Transaction();
+  tx.setGasBudget(40_000_000);
+
+  tx.moveCall({
+    target: `${PACKAGE_ID}::${MODULE_NAME}::settle_round`,
+    arguments: [
+      tx.object(MARKET_ID),
+      tx.pure.u64(roundId),
+      tx.pure.u8(predictionOutcomeSide),
       tx.object(CLOCK_OBJECT_ID),
     ],
   });
@@ -84,32 +109,6 @@ export function buildDistributeMockYieldTx(roundId: number, basisPoints: number,
       tx.pure.u64(basisPoints),
       tx.pure.u64(maxAmountMist),
     ],
-  });
-
-  return tx;
-}
-
-export function buildClaimYieldTx(roundId: number) {
-  assertConfig();
-  const tx = new Transaction();
-  tx.setGasBudget(20_000_000);
-
-  tx.moveCall({
-    target: `${PACKAGE_ID}::${MODULE_NAME}::claim_yield`,
-    arguments: [tx.object(MARKET_ID), tx.pure.u64(roundId)],
-  });
-
-  return tx;
-}
-
-export function buildWithdrawPrincipalTx(roundId: number, side: 1 | 2, amountMist: bigint) {
-  assertConfig();
-  const tx = new Transaction();
-  tx.setGasBudget(20_000_000);
-
-  tx.moveCall({
-    target: `${PACKAGE_ID}::${MODULE_NAME}::withdraw_principal`,
-    arguments: [tx.object(MARKET_ID), tx.pure.u64(roundId), tx.pure.u8(side), tx.pure.u64(amountMist)],
   });
 
   return tx;

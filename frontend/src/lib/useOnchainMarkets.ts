@@ -9,7 +9,7 @@ import {
   fetchModuleEvents,
   isBetPlaced,
   isRoundCreated,
-  isRoundResolved,
+  isRoundSettled,
   isYieldFunded,
   readField,
 } from './chain';
@@ -18,11 +18,15 @@ export type OnchainMarket = {
   roundId: number;
   question: string;
   closeTimestampMs: number;
+  mode: number;
+  manualSide: number;
   totalYes: number;
   totalNo: number;
   yieldPool: number;
   resolved: boolean;
   winningSide: number;
+  winner: string;
+  prizeAmount: number;
   createdBy: string;
   createDigest: string;
   createdAtMs: number;
@@ -52,11 +56,15 @@ export function useOnchainMarkets() {
             roundId,
             question: `Round #${roundId}`,
             closeTimestampMs: asNumber(readField(r, 'close_timestamp_ms', 'closeTimestampMs')),
+            mode: asNumber(readField(r, 'mode', 'mode')),
+            manualSide: asNumber(readField(r, 'manual_side', 'manualSide')),
             totalYes: asNumber(readField(r, 'total_yes', 'totalYes')),
             totalNo: asNumber(readField(r, 'total_no', 'totalNo')),
             yieldPool: asNumber(readField(r, 'yield_pool', 'yieldPool')),
             resolved: asBoolean(readField(r, 'resolved', 'resolved')),
             winningSide: asNumber(readField(r, 'winning_side', 'winningSide')),
+            winner: String(readField(r, 'winner', 'winner') ?? ''),
+            prizeAmount: 0,
             createdBy: '',
             createDigest: '',
             createdAtMs: 0,
@@ -76,16 +84,21 @@ export function useOnchainMarkets() {
             roundId,
             question: `Round #${roundId}`,
             closeTimestampMs: asNumber(readField(json, 'close_timestamp_ms', 'closeTimestampMs')),
+            mode: asNumber(readField(json, 'mode', 'mode')),
+            manualSide: asNumber(readField(json, 'manual_side', 'manualSide')),
             totalYes: 0,
             totalNo: 0,
             yieldPool: 0,
             resolved: false,
             winningSide: 0,
+            winner: '',
+            prizeAmount: 0,
             createdBy: '',
             createDigest: '',
             createdAtMs: 0,
           });
         }
+
         const market = baseMap.get(roundId);
         if (market && !market.createDigest) {
           market.createDigest = evt.txDigest;
@@ -137,9 +150,11 @@ export function useOnchainMarkets() {
           }
         }
 
-        if (isRoundResolved(evt)) {
+        if (isRoundSettled(evt)) {
           market.resolved = true;
           market.winningSide = asNumber(readField(json, 'winning_side', 'winningSide'));
+          market.winner = String(readField(json, 'winner', 'winner') ?? '');
+          market.prizeAmount = asNumber(readField(json, 'prize_amount', 'prizeAmount'));
         }
       }
 

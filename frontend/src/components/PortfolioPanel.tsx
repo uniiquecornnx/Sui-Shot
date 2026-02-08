@@ -1,6 +1,3 @@
-import { useSignAndExecuteTransaction } from '@mysten/dapp-kit';
-import { useState } from 'react';
-import { buildClaimYieldTx, buildWithdrawPrincipalTx } from '../lib/tx';
 import type { OnchainMarket } from '../lib/useOnchainMarkets';
 import type { UserPortfolioData } from '../lib/useUserPortfolio';
 
@@ -15,17 +12,9 @@ function explorerLink(digest: string): string {
 type Props = {
   markets: OnchainMarket[];
   portfolio: UserPortfolioData | undefined;
-  onRefresh: () => void;
 };
 
-export function PortfolioPanel({ markets, portfolio, onRefresh }: Props) {
-  const { mutateAsync: signAndExecuteTransaction, isPending } = useSignAndExecuteTransaction();
-  const [withdrawRound, setWithdrawRound] = useState('');
-  const [withdrawSide, setWithdrawSide] = useState<'1' | '2'>('1');
-  const [withdrawAmount, setWithdrawAmount] = useState('0.05');
-  const [claimRound, setClaimRound] = useState('');
-  const [status, setStatus] = useState('');
-
+export function PortfolioPanel({ markets, portfolio }: Props) {
   const positions = portfolio?.positions ?? [];
   const history = portfolio?.history ?? [];
   const marketByRound = new Map(markets.map((m) => [m.roundId, m]));
@@ -40,42 +29,11 @@ export function PortfolioPanel({ markets, portfolio, onRefresh }: Props) {
     return m ? m.resolved : false;
   });
 
-  async function claimYield() {
-    const round = Number(claimRound);
-    if (!Number.isInteger(round) || round < 0) return setStatus('Enter a valid round id for claim.');
-
-    try {
-      const tx = buildClaimYieldTx(round);
-      const result = await signAndExecuteTransaction({ transaction: tx as any });
-      setStatus(`Yield claimed: ${result.digest}`);
-      onRefresh();
-    } catch (error) {
-      setStatus(`Claim failed: ${(error as Error).message}`);
-    }
-  }
-
-  async function withdrawPrincipal() {
-    const round = Number(withdrawRound);
-    const amount = Number(withdrawAmount);
-    if (!Number.isInteger(round) || round < 0) return setStatus('Enter a valid round id for withdrawal.');
-    if (!Number.isFinite(amount) || amount <= 0) return setStatus('Enter a valid withdrawal amount.');
-
-    try {
-      const amountMist = BigInt(Math.floor(amount * 1_000_000_000));
-      const tx = buildWithdrawPrincipalTx(round, withdrawSide === '1' ? 1 : 2, amountMist);
-      const result = await signAndExecuteTransaction({ transaction: tx as any });
-      setStatus(`Principal withdrawn: ${result.digest}`);
-      onRefresh();
-    } catch (error) {
-      setStatus(`Withdraw failed: ${(error as Error).message}`);
-    }
-  }
-
   return (
     <section className="panel glass">
       <h3>Your Portfolio</h3>
       <p className="meta">
-        Wallet balance: {mistToSui(portfolio?.walletBalance ?? 0)} SUI | Total staked: {mistToSui(portfolio?.totalStaked ?? 0)} SUI
+        Wallet balance: {mistToSui(portfolio?.walletBalance ?? 0)} SUI | Total historically staked: {mistToSui(portfolio?.totalStaked ?? 0)} SUI
       </p>
 
       {positions.length === 0 ? <p className="hint">No bets found for connected wallet yet.</p> : null}
@@ -111,35 +69,16 @@ export function PortfolioPanel({ markets, portfolio, onRefresh }: Props) {
                   <p className="portfolio-meta">
                     YES: {mistToSui(p.yes)} | NO: {mistToSui(p.no)} | Total: {mistToSui(p.total)} SUI
                   </p>
-                  <p className="portfolio-meta">Result: {market?.winningSide === 1 ? 'YES' : market?.winningSide === 2 ? 'NO' : '-'}</p>
+                  <p className="portfolio-meta">
+                    Result side: {market?.winningSide === 1 ? 'YES' : market?.winningSide === 2 ? 'NO' : '-'} | Winner: {market?.winner ? `${market.winner.slice(0, 8)}...${market.winner.slice(-6)}` : '-'}
+                  </p>
+                  <p className="portfolio-meta">Prize: {mistToSui(market?.prizeAmount ?? 0)} SUI</p>
                 </div>
               );
             })}
           </div>
         </>
       ) : null}
-
-      <h4 className="portfolio-heading">Actions</h4>
-      <div className="portfolio-actions">
-        <div className="action-card">
-          <p className="portfolio-q">Withdraw Principal</p>
-          <input placeholder="Round id" value={withdrawRound} onChange={(e) => setWithdrawRound(e.target.value)} />
-          <select value={withdrawSide} onChange={(e) => setWithdrawSide(e.target.value as '1' | '2')}>
-            <option value="1">YES side</option>
-            <option value="2">NO side</option>
-          </select>
-          <input placeholder="Amount (SUI)" value={withdrawAmount} onChange={(e) => setWithdrawAmount(e.target.value)} />
-          <button className="btn-yield" disabled={isPending} onClick={withdrawPrincipal}>Withdraw</button>
-        </div>
-
-        <div className="action-card">
-          <p className="portfolio-q">Claim Yield</p>
-          <input placeholder="Round id" value={claimRound} onChange={(e) => setClaimRound(e.target.value)} />
-          <button className="btn-yield" disabled={isPending} onClick={claimYield}>Claim</button>
-        </div>
-      </div>
-
-      {status ? <p className="status">{status}</p> : null}
 
       <h4 className="portfolio-heading">Transaction History</h4>
       {history.length === 0 ? (

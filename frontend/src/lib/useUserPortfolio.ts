@@ -5,8 +5,8 @@ import {
   asNumber,
   fetchModuleEvents,
   isBetPlaced,
-  isPrincipalWithdrawn,
-  isYieldClaimed,
+  isPrincipalReturned,
+  isRoundPrize,
   readField,
 } from './chain';
 
@@ -19,7 +19,7 @@ export type UserPosition = {
 
 export type UserActivity = {
   digest: string;
-  action: 'BET' | 'WITHDRAW' | 'CLAIM';
+  action: 'BET' | 'RETURN' | 'PRIZE';
   roundId: number;
   amount: number;
   side: number;
@@ -57,14 +57,14 @@ export function useUserPortfolio() {
       for (const evt of events) {
         if (!evt.parsedJson) continue;
         const json = evt.parsedJson;
-        const user = String(readField(json, 'user', 'user') ?? '').toLowerCase();
-        if (user !== me) continue;
-
         const roundId = asNumber(readField(json, 'round_id', 'roundId'));
-        const side = asNumber(readField(json, 'side', 'side'));
-        const amount = asNumber(readField(json, 'amount', 'amount'));
 
         if (isBetPlaced(evt)) {
+          const user = String(readField(json, 'user', 'user') ?? '').toLowerCase();
+          if (user !== me) continue;
+          const side = asNumber(readField(json, 'side', 'side'));
+          const amount = asNumber(readField(json, 'amount', 'amount'));
+
           const row = map.get(roundId) ?? { roundId, yes: 0, no: 0, total: 0 };
           if (side === 1) row.yes += amount;
           if (side === 2) row.no += amount;
@@ -74,18 +74,19 @@ export function useUserPortfolio() {
           continue;
         }
 
-        if (isPrincipalWithdrawn(evt)) {
-          const row = map.get(roundId) ?? { roundId, yes: 0, no: 0, total: 0 };
-          if (side === 1) row.yes = Math.max(0, row.yes - amount);
-          if (side === 2) row.no = Math.max(0, row.no - amount);
-          row.total = Math.max(0, row.total - amount);
-          map.set(roundId, row);
-          history.push({ digest: evt.txDigest, action: 'WITHDRAW', roundId, amount, side, timestampMs: evt.timestampMs });
+        if (isPrincipalReturned(evt)) {
+          const user = String(readField(json, 'user', 'user') ?? '').toLowerCase();
+          if (user !== me) continue;
+          const amount = asNumber(readField(json, 'amount', 'amount'));
+          history.push({ digest: evt.txDigest, action: 'RETURN', roundId, amount, side: 0, timestampMs: evt.timestampMs });
           continue;
         }
 
-        if (isYieldClaimed(evt)) {
-          history.push({ digest: evt.txDigest, action: 'CLAIM', roundId, amount, side: 0, timestampMs: evt.timestampMs });
+        if (isRoundPrize(evt)) {
+          const winner = String(readField(json, 'winner', 'winner') ?? '').toLowerCase();
+          if (winner !== me) continue;
+          const amount = asNumber(readField(json, 'prize_amount', 'prizeAmount'));
+          history.push({ digest: evt.txDigest, action: 'PRIZE', roundId, amount, side: 0, timestampMs: evt.timestampMs });
         }
       }
 
