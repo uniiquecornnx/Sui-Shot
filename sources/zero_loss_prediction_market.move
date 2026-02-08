@@ -19,6 +19,10 @@ module prediction_market::zero_loss_prediction_market {
     const E_MANUAL_REQUIRES_SIDE: u64 = 10;
     const E_PREDICTION_REQUIRES_SIDE: u64 = 11;
     const E_INVALID_PREDICTION_CONFIG: u64 = 12;
+    const E_INSUFFICIENT_PRINCIPAL: u64 = 13;
+    const E_INSUFFICIENT_STRATEGY: u64 = 14;
+    const E_INSUFFICIENT_STRATEGY_YIELD: u64 = 15;
+    const E_INSUFFICIENT_ACCRUED_YIELD: u64 = 16;
 
     const SIDE_YES: u8 = 1;
     const SIDE_NO: u8 = 2;
@@ -26,6 +30,7 @@ module prediction_market::zero_loss_prediction_market {
     const MODE_RANDOM: u8 = 1;
     const MODE_PREDICTION: u8 = 2;
     const MODE_MANUAL: u8 = 3;
+    const MS_PER_YEAR: u64 = 31_536_000_000;
 
     public struct PredictionMarket has key {
         id: sui::object::UID,
@@ -33,6 +38,14 @@ module prediction_market::zero_loss_prediction_market {
         next_round_id: u64,
         principal_vault: Balance<SUI>,
         yield_vault: Balance<SUI>,
+        strategy_principal_deployed: Balance<SUI>,
+        strategy_yield_vault: Balance<SUI>,
+        strategy_total_yield_funded: u64,
+        strategy_total_yield_allocated: u64,
+        strategy_apr_bps: u64,
+        strategy_last_accrual_ms: u64,
+        strategy_accrued_available: u64,
+        strategy_total_accrued: u64,
         rounds: vector<Round>
     }
 
@@ -105,6 +118,36 @@ module prediction_market::zero_loss_prediction_market {
         amount: u64
     }
 
+    public struct StrategyPrincipalDeployed has copy, drop {
+        amount: u64
+    }
+
+    public struct StrategyPrincipalRecalled has copy, drop {
+        amount: u64
+    }
+
+    public struct StrategyYieldFunded has copy, drop {
+        amount: u64,
+        by: address
+    }
+
+    public struct StrategyYieldAllocated has copy, drop {
+        round_id: u64,
+        amount: u64
+    }
+
+    public struct StrategyYieldAccrued has copy, drop {
+        elapsed_ms: u64,
+        deployed_principal: u64,
+        apr_bps: u64,
+        accrued_amount: u64,
+        accrued_available: u64
+    }
+
+    public struct StrategyAprUpdated has copy, drop {
+        apr_bps: u64
+    }
+
     fun init(ctx: &mut sui::tx_context::TxContext) {
         let admin = ctx.sender();
         let market = PredictionMarket {
@@ -113,6 +156,14 @@ module prediction_market::zero_loss_prediction_market {
             next_round_id: 0,
             principal_vault: balance::zero<SUI>(),
             yield_vault: balance::zero<SUI>(),
+            strategy_principal_deployed: balance::zero<SUI>(),
+            strategy_yield_vault: balance::zero<SUI>(),
+            strategy_total_yield_funded: 0,
+            strategy_total_yield_allocated: 0,
+            strategy_apr_bps: 350,
+            strategy_last_accrual_ms: 0,
+            strategy_accrued_available: 0,
+            strategy_total_accrued: 0,
             rounds: vector::empty<Round>()
         };
 
@@ -259,6 +310,104 @@ module prediction_market::zero_loss_prediction_market {
         });
     }
 
+    public entry fun set_strategy_apr_bps(
+        market: &mut PredictionMarket,
+        apr_bps: u64,
+        ctx: &mut sui::tx_context::TxContext,
+    ) {
+        assert_admin(market, ctx);
+        market.strategy_apr_bps = apr_bps;
+        event::emit(StrategyAprUpdated { apr_bps });
+    }
+
+    // Simulates deploying principal into an external strategy (SuiLend adapter path).
+    public entry fun deploy_principal_to_strategy(
+        market: &mut PredictionMarket,
+        amount: u64,
+        clock: &Clock,
+        ctx: &mut sui::tx_context::TxContext,
+    ) {
+        assert_admin(market, ctx);
+        accrue_strategy_yield_internal(market, clock);
+        assert!(amount > 0, E_ZERO_AMOUNT);
+        let available = balance::value(&market.principal_vault);
+        assert!(available >= amount, E_INSUFFICIENT_PRINCIPAL);
+
+        let deployed = balance::split(&mut market.principal_vault, amount);
+        balance::join(&mut market.strategy_principal_deployed, deployed);
+        event::emit(StrategyPrincipalDeployed { amount });
+    }
+
+    // Simulates recalling principal from strategy into the market vault.
+    public entry fun recall_principal_from_strategy(
+        market: &mut PredictionMarket,
+        amount: u64,
+        clock: &Clock,
+        ctx: &mut sui::tx_context::TxContext,
+    ) {
+        assert_admin(market, ctx);
+        accrue_strategy_yield_internal(market, clock);
+        assert!(amount > 0, E_ZERO_AMOUNT);
+        let deployed = balance::value(&market.strategy_principal_deployed);
+        assert!(deployed >= amount, E_INSUFFICIENT_STRATEGY);
+
+        let recalled = balance::split(&mut market.strategy_principal_deployed, amount);
+        balance::join(&mut market.principal_vault, recalled);
+        event::emit(StrategyPrincipalRecalled { amount });
+    }
+
+    // Funds strategy yield reserve that can later be allocated into round prize pools.
+    public entry fun fund_strategy_yield(
+        market: &mut PredictionMarket,
+        contribution: Coin<SUI>,
+        ctx: &mut sui::tx_context::TxContext,
+    ) {
+        let amount = coin::value(&contribution);
+        assert!(amount > 0, E_ZERO_AMOUNT);
+        let contribution_balance = coin::into_balance(contribution);
+        balance::join(&mut market.strategy_yield_vault, contribution_balance);
+        market.strategy_total_yield_funded = market.strategy_total_yield_funded + amount;
+
+        event::emit(StrategyYieldFunded {
+            amount,
+            by: ctx.sender()
+        });
+    }
+
+    public entry fun accrue_strategy_yield(
+        market: &mut PredictionMarket,
+        clock: &Clock,
+    ) {
+        accrue_strategy_yield_internal(market, clock);
+    }
+
+    // Routes accrued strategy yield into a specific round's prize pool.
+    public entry fun allocate_strategy_yield_to_round(
+        market: &mut PredictionMarket,
+        round_id: u64,
+        amount: u64,
+        clock: &Clock,
+        ctx: &mut sui::tx_context::TxContext,
+    ) {
+        assert_admin(market, ctx);
+        accrue_strategy_yield_internal(market, clock);
+        assert!(amount > 0, E_ZERO_AMOUNT);
+        assert!(market.strategy_accrued_available >= amount, E_INSUFFICIENT_ACCRUED_YIELD);
+        let available = balance::value(&market.strategy_yield_vault);
+        assert!(available >= amount, E_INSUFFICIENT_STRATEGY_YIELD);
+
+        let routed = balance::split(&mut market.strategy_yield_vault, amount);
+        balance::join(&mut market.yield_vault, routed);
+        market.strategy_accrued_available = market.strategy_accrued_available - amount;
+        market.strategy_total_yield_allocated = market.strategy_total_yield_allocated + amount;
+
+        let round = borrow_round_mut(market, round_id);
+        round.yield_pool = round.yield_pool + amount;
+
+        event::emit(YieldFunded { round_id, amount });
+        event::emit(StrategyYieldAllocated { round_id, amount });
+    }
+
     // Finalizes the round: picks winning side/winner and returns all principals automatically.
     // prediction_outcome_side is used only for MODE_PREDICTION (must be YES/NO).
     public entry fun settle_round(
@@ -329,6 +478,18 @@ module prediction_market::zero_loss_prediction_market {
             round.winner = winner;
         };
 
+        let needed_principal = sum_amounts(&refund_amounts);
+        if (needed_principal > 0) {
+            let available_principal = balance::value(&market.principal_vault);
+            if (available_principal < needed_principal) {
+                let shortfall = needed_principal - available_principal;
+                let deployed = balance::value(&market.strategy_principal_deployed);
+                assert!(deployed >= shortfall, E_INSUFFICIENT_STRATEGY);
+                let recalled = balance::split(&mut market.strategy_principal_deployed, shortfall);
+                balance::join(&mut market.principal_vault, recalled);
+            };
+        };
+
         let refunds_len = vector::length(&refund_users);
         let mut i = 0;
         while (i < refunds_len) {
@@ -381,6 +542,32 @@ module prediction_market::zero_loss_prediction_market {
             round.yield_pool,
             round.prediction_target_price_e6,
             round.prediction_comparator
+        )
+    }
+
+    public fun get_strategy_meta(market: &PredictionMarket): (u64, u64, u64, u64, u64, u64) {
+        (
+            balance::value(&market.principal_vault),
+            balance::value(&market.strategy_principal_deployed),
+            balance::value(&market.strategy_yield_vault),
+            balance::value(&market.yield_vault),
+            market.strategy_total_yield_funded,
+            market.strategy_total_yield_allocated
+        )
+    }
+
+    public fun get_strategy_meta_v2(market: &PredictionMarket): (u64, u64, u64, u64, u64, u64, u64, u64, u64, u64) {
+        (
+            balance::value(&market.principal_vault),
+            balance::value(&market.strategy_principal_deployed),
+            balance::value(&market.strategy_yield_vault),
+            balance::value(&market.yield_vault),
+            market.strategy_total_yield_funded,
+            market.strategy_total_yield_allocated,
+            market.strategy_apr_bps,
+            market.strategy_last_accrual_ms,
+            market.strategy_accrued_available,
+            market.strategy_total_accrued
         )
     }
 
@@ -462,6 +649,74 @@ module prediction_market::zero_loss_prediction_market {
             };
             i = i + 1;
         };
+    }
+
+    fun sum_amounts(amounts: &vector<u64>): u64 {
+        let len = vector::length(amounts);
+        let mut total = 0;
+        let mut i = 0;
+        while (i < len) {
+            total = total + *vector::borrow(amounts, i);
+            i = i + 1;
+        };
+        total
+    }
+
+    fun accrue_strategy_yield_internal(
+        market: &mut PredictionMarket,
+        clock: &Clock,
+    ) {
+        let now_ms = clock::timestamp_ms(clock);
+        let last = market.strategy_last_accrual_ms;
+        if (last == 0) {
+            market.strategy_last_accrual_ms = now_ms;
+            event::emit(StrategyYieldAccrued {
+                elapsed_ms: 0,
+                deployed_principal: balance::value(&market.strategy_principal_deployed),
+                apr_bps: market.strategy_apr_bps,
+                accrued_amount: 0,
+                accrued_available: market.strategy_accrued_available
+            });
+            return
+        };
+        if (now_ms <= last) {
+            return
+        };
+
+        let elapsed_ms = now_ms - last;
+        let deployed_principal = balance::value(&market.strategy_principal_deployed);
+        if (deployed_principal == 0 || market.strategy_apr_bps == 0) {
+            market.strategy_last_accrual_ms = now_ms;
+            event::emit(StrategyYieldAccrued {
+                elapsed_ms,
+                deployed_principal,
+                apr_bps: market.strategy_apr_bps,
+                accrued_amount: 0,
+                accrued_available: market.strategy_accrued_available
+            });
+            return
+        };
+
+        let accrued_u128 =
+            (deployed_principal as u128) *
+            (market.strategy_apr_bps as u128) *
+            (elapsed_ms as u128) /
+            10_000u128 /
+            (MS_PER_YEAR as u128);
+        let accrued = accrued_u128 as u64;
+        if (accrued > 0) {
+            market.strategy_accrued_available = market.strategy_accrued_available + accrued;
+            market.strategy_total_accrued = market.strategy_total_accrued + accrued;
+        };
+        market.strategy_last_accrual_ms = now_ms;
+
+        event::emit(StrategyYieldAccrued {
+            elapsed_ms,
+            deployed_principal,
+            apr_bps: market.strategy_apr_bps,
+            accrued_amount: accrued,
+            accrued_available: market.strategy_accrued_available
+        });
     }
 
     fun borrow_round_mut(market: &mut PredictionMarket, round_id: u64): &mut Round {
