@@ -19,6 +19,8 @@ Sui Shot flips the model:
 - yield-funded rewards
 - transparent on-chain accounting
 
+![Sui Shot](workflow-suishot.png)
+
 ## Why Sui Is Perfect for This
 
 Sui is a strong fit for no-loss markets because of its object-centric architecture and fast UX.
