@@ -39,6 +39,10 @@ export function buildCreateRoundTx(
   closeTimestampMs: bigint,
   mode: 1 | 2 | 3,
   manualSide: 0 | 1 | 2,
+  predictionNetwork: string,
+  predictionTokenAddress: string,
+  predictionTargetPriceE6: bigint,
+  predictionComparator: 0 | 1 | 2,
 ) {
   assertConfig();
   const tx = new Transaction();
@@ -52,6 +56,10 @@ export function buildCreateRoundTx(
       tx.pure.u64(closeTimestampMs),
       tx.pure.u8(mode),
       tx.pure.u8(manualSide),
+      tx.pure.string(predictionNetwork),
+      tx.pure.string(predictionTokenAddress),
+      tx.pure.u64(predictionTargetPriceE6),
+      tx.pure.u8(predictionComparator),
       tx.object(CLOCK_OBJECT_ID),
     ],
   });
@@ -109,6 +117,24 @@ export function buildDistributeMockYieldTx(roundId: number, basisPoints: number,
       tx.pure.u64(basisPoints),
       tx.pure.u64(maxAmountMist),
     ],
+  });
+
+  return tx;
+}
+
+export function buildDepositMockReserveTx(amountMist: bigint) {
+  assertConfig();
+  if (!MOCK_YIELD_ENGINE_ID) {
+    throw new Error('Missing VITE_MOCK_YIELD_ENGINE_ID in frontend .env');
+  }
+
+  const tx = new Transaction();
+  tx.setGasBudget(20_000_000);
+  const [coin] = tx.splitCoins(tx.gas, [tx.pure.u64(amountMist)]);
+
+  tx.moveCall({
+    target: `${PACKAGE_ID}::${MOCK_YIELD_MODULE_NAME}::deposit_reserve`,
+    arguments: [tx.object(MOCK_YIELD_ENGINE_ID), coin],
   });
 
   return tx;

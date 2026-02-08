@@ -18,6 +18,7 @@ module prediction_market::zero_loss_prediction_market {
     const E_INVALID_MODE: u64 = 9;
     const E_MANUAL_REQUIRES_SIDE: u64 = 10;
     const E_PREDICTION_REQUIRES_SIDE: u64 = 11;
+    const E_INVALID_PREDICTION_CONFIG: u64 = 12;
 
     const SIDE_YES: u8 = 1;
     const SIDE_NO: u8 = 2;
@@ -40,6 +41,10 @@ module prediction_market::zero_loss_prediction_market {
         close_timestamp_ms: u64,
         mode: u8,
         manual_side: u8,
+        prediction_network: String,
+        prediction_token_address: String,
+        prediction_target_price_e6: u64,
+        prediction_comparator: u8,
         resolved: bool,
         winning_side: u8,
         winner: address,
@@ -69,6 +74,8 @@ module prediction_market::zero_loss_prediction_market {
         close_timestamp_ms: u64,
         mode: u8,
         manual_side: u8,
+        prediction_target_price_e6: u64,
+        prediction_comparator: u8,
         metadata_id: sui::object::ID
     }
 
@@ -123,6 +130,10 @@ module prediction_market::zero_loss_prediction_market {
         close_timestamp_ms: u64,
         mode: u8,
         manual_side: u8,
+        prediction_network: String,
+        prediction_token_address: String,
+        prediction_target_price_e6: u64,
+        prediction_comparator: u8,
         clock: &Clock,
         ctx: &mut sui::tx_context::TxContext,
     ) {
@@ -134,8 +145,14 @@ module prediction_market::zero_loss_prediction_market {
 
         if (mode == MODE_MANUAL) {
             assert_valid_side(manual_side);
+            assert!(prediction_target_price_e6 == 0 && prediction_comparator == 0, E_INVALID_PREDICTION_CONFIG);
+        } else if (mode == MODE_PREDICTION) {
+            assert!(manual_side == 0, E_MANUAL_REQUIRES_SIDE);
+            assert!(prediction_target_price_e6 > 0, E_INVALID_PREDICTION_CONFIG);
+            assert!(prediction_comparator == 1 || prediction_comparator == 2, E_INVALID_PREDICTION_CONFIG);
         } else {
             assert!(manual_side == 0, E_MANUAL_REQUIRES_SIDE);
+            assert!(prediction_target_price_e6 == 0 && prediction_comparator == 0, E_INVALID_PREDICTION_CONFIG);
         };
 
         let round_id = market.next_round_id;
@@ -146,6 +163,10 @@ module prediction_market::zero_loss_prediction_market {
             close_timestamp_ms,
             mode,
             manual_side,
+            prediction_network,
+            prediction_token_address,
+            prediction_target_price_e6,
+            prediction_comparator,
             resolved: false,
             winning_side: 0,
             winner: @0x0,
@@ -174,6 +195,8 @@ module prediction_market::zero_loss_prediction_market {
             close_timestamp_ms,
             mode,
             manual_side,
+            prediction_target_price_e6,
+            prediction_comparator,
             metadata_id
         });
     }
@@ -345,7 +368,7 @@ module prediction_market::zero_loss_prediction_market {
         vector::length(&market.rounds)
     }
 
-    public fun get_round_meta(market: &PredictionMarket, round_id: u64): (u64, u8, bool, u8, address, u64, u64, u64) {
+    public fun get_round_meta(market: &PredictionMarket, round_id: u64): (u64, u8, bool, u8, address, u64, u64, u64, u64, u8) {
         let round = borrow_round(market, round_id);
         (
             round.close_timestamp_ms,
@@ -355,7 +378,9 @@ module prediction_market::zero_loss_prediction_market {
             round.winner,
             round.total_yes,
             round.total_no,
-            round.yield_pool
+            round.yield_pool,
+            round.prediction_target_price_e6,
+            round.prediction_comparator
         )
     }
 

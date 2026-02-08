@@ -33,14 +33,14 @@ export function StrategyPanel({ markets, chainAdmin }: Props) {
         </div>
         <div className="strategy-card">
           <p className="portfolio-q">Automation Status</p>
-          <p className="portfolio-meta">Not yet automated on-chain. Requires strategy adapter upgrade.</p>
+          <p className="portfolio-meta">Direct funding live. SuiLend automation not integrated yet.</p>
         </div>
       </div>
 
       <h4 className="portfolio-heading">What Works Right Now</h4>
       <ul>
         <li>Users place bets and principal is held safely in-market.</li>
-        <li>Yield can be distributed to rounds (mock engine / direct funding).</li>
+        <li>Yield can be distributed directly to rounds by admin funding.</li>
         <li>Portfolio and round-level tracking is live from chain events.</li>
       </ul>
 

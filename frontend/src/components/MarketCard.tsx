@@ -1,5 +1,6 @@
 import { useCurrentAccount, useSignAndExecuteTransaction } from '@mysten/dapp-kit';
 import { useState } from 'react';
+import { fetchTokenUsdPrice } from '../lib/coingecko';
 import { buildFundYieldTx, buildPlaceBetTx, buildSettleRoundTx } from '../lib/tx';
 import type { OnchainMarket } from '../lib/useOnchainMarkets';
 
@@ -21,7 +22,6 @@ export function MarketCard({ market, onRefresh, myYes, myNo, canFundYield, canSe
   const { mutateAsync: signAndExecuteTransaction, isPending } = useSignAndExecuteTransaction();
   const [betAmount, setBetAmount] = useState('0.1');
   const [yieldAmount, setYieldAmount] = useState('0.02');
-  const [predictionOutcome, setPredictionOutcome] = useState<'1' | '2'>('1');
   const [status, setStatus] = useState('');
 
   const totalPool = market.totalYes + market.totalNo;
@@ -66,7 +66,16 @@ export function MarketCard({ market, onRefresh, myYes, myNo, canFundYield, canSe
 
   async function settleRound() {
     try {
-      const outcome = market.mode === 2 ? (Number(predictionOutcome) as 1 | 2) : 0;
+      let outcome: 0 | 1 | 2 = 0;
+      if (market.mode === 2) {
+        const price = await fetchTokenUsdPrice(market.predictionNetwork, market.predictionTokenAddress);
+        const target = market.predictionTargetPriceE6 / 1_000_000;
+        const yes =
+          market.predictionComparator === 1
+            ? price >= target
+            : price <= target;
+        outcome = yes ? 1 : 2;
+      }
       const tx = buildSettleRoundTx(market.roundId, outcome as 0 | 1 | 2);
       const result = await signAndExecuteTransaction({ transaction: tx as any });
       setStatus(`Round settled: ${result.digest}`);
@@ -87,7 +96,6 @@ export function MarketCard({ market, onRefresh, myYes, myNo, canFundYield, canSe
       <p className="meta">Closing: {new Date(market.closeTimestampMs).toLocaleString()}</p>
       <p className="meta">Pool: {mistToSui(totalPool)} SUI | Yield: {mistToSui(market.yieldPool)} SUI</p>
       <p className="meta">My bet: YES {mistToSui(myYes)} | NO {mistToSui(myNo)} SUI</p>
-
       <div className="odds-wrap">
         <div className="odd yes">YES {yesPct}% ({mistToSui(market.totalYes)} SUI)</div>
         <div className="odd no">NO {noPct}% ({mistToSui(market.totalNo)} SUI)</div>
@@ -127,19 +135,6 @@ export function MarketCard({ market, onRefresh, myYes, myNo, canFundYield, canSe
 
       {canSettle && !market.resolved && isClosedTime ? (
         <>
-          {market.mode === 2 ? (
-            <div className="bet-controls">
-              <label htmlFor={`outcome-${market.roundId}`}>Prediction outcome</label>
-              <select
-                id={`outcome-${market.roundId}`}
-                value={predictionOutcome}
-                onChange={(e) => setPredictionOutcome(e.target.value as '1' | '2')}
-              >
-                <option value="1">YES</option>
-                <option value="2">NO</option>
-              </select>
-            </div>
-          ) : null}
           <button disabled={isPending} onClick={settleRound} className="btn-yield">Trigger Draw / Settle</button>
         </>
       ) : null}

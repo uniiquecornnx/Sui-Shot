@@ -3,7 +3,6 @@ import { useState } from 'react';
 import { CreateRoundForm } from './components/CreateRoundForm';
 import { Header } from './components/Header';
 import { MarketCard } from './components/MarketCard';
-import { MockYieldPanel } from './components/MockYieldPanel';
 import { PortfolioPanel } from './components/PortfolioPanel';
 import { StrategyPanel } from './components/StrategyPanel';
 import { useMarketAdmin } from './lib/useMarketAdmin';
@@ -46,7 +45,6 @@ export default function App() {
         {activeTab === 'markets' ? (
           <>
             {canRunAdminActions ? <CreateRoundForm onRefresh={refreshAll} /> : null}
-            {canRunAdminActions ? <MockYieldPanel onRefresh={refreshAll} defaultRoundId={markets?.[0]?.roundId ?? 0} /> : null}
 
             {isLoading ? <p className="hint">Loading on-chain rounds...</p> : null}
             {isError ? <p className="hint">Could not load rounds. Check network/wallet.</p> : null}

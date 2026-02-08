@@ -1,6 +1,6 @@
 import { useCurrentAccount, useSignAndExecuteTransaction } from '@mysten/dapp-kit';
 import { useState } from 'react';
-import { buildDistributeMockYieldTx } from '../lib/tx';
+import { buildDepositMockReserveTx, buildDistributeMockYieldTx } from '../lib/tx';
 
 type Props = {
   defaultRoundId?: number;
@@ -11,10 +11,27 @@ export function MockYieldPanel({ defaultRoundId = 0, onRefresh }: Props) {
   const account = useCurrentAccount();
   const { mutateAsync: signAndExecuteTransaction, isPending } = useSignAndExecuteTransaction();
 
+  const [reserveSui, setReserveSui] = useState('1');
   const [roundId, setRoundId] = useState(String(defaultRoundId));
   const [bps, setBps] = useState('300');
   const [maxSui, setMaxSui] = useState('0.25');
   const [status, setStatus] = useState('');
+
+  async function depositReserve() {
+    if (!account) return setStatus('Connect wallet first.');
+    const amt = Number(reserveSui);
+    if (!Number.isFinite(amt) || amt <= 0) return setStatus('Invalid reserve amount.');
+
+    try {
+      const amountMist = BigInt(Math.floor(amt * 1_000_000_000));
+      const tx = buildDepositMockReserveTx(amountMist);
+      const result = await signAndExecuteTransaction({ transaction: tx as any });
+      setStatus(`Reserve deposited: ${result.digest}`);
+      onRefresh();
+    } catch (error) {
+      setStatus(`Reserve deposit failed: ${(error as Error).message}`);
+    }
+  }
 
   async function distribute() {
     if (!account) return setStatus('Connect wallet first.');
@@ -33,14 +50,20 @@ export function MockYieldPanel({ defaultRoundId = 0, onRefresh }: Props) {
       setStatus(`Mock yield distributed: ${result.digest}`);
       onRefresh();
     } catch (error) {
-      setStatus(`Failed: ${(error as Error).message}`);
+      setStatus(`Distribute failed: ${(error as Error).message}`);
     }
   }
 
   return (
     <section className="panel glass">
       <h3>Mock Yield Engine</h3>
-      <p className="hint">Simulate yield and route it to a round prize pool (for testing before SuiLend).</p>
+      <p className="hint">Step 1: deposit reserve from your wallet. Step 2: distribute reserve yield to chosen round.</p>
+
+      <div className="form-grid">
+        <label htmlFor="reserve">Reserve deposit (SUI)</label>
+        <input id="reserve" value={reserveSui} onChange={(e) => setReserveSui(e.target.value)} inputMode="decimal" />
+      </div>
+      <button className="btn-yield" disabled={isPending} onClick={depositReserve}>Deposit Reserve</button>
 
       <div className="form-grid">
         <label htmlFor="yr">Round id</label>

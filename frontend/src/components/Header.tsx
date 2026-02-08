@@ -11,9 +11,9 @@ export function Header({ activeTab, onTabChange }: Props) {
   return (
     <header className="header glass">
       <div>
-        <p className="eyebrow">Zero-loss prediction market on Sui</p>
-        <h1>Lucky Lemons</h1>
-        <p className="sub">Bet YES/NO with protected principal. Win from yield, not from losses.</p>
+        <p className="eyebrow"></p>
+        <h1>🎯 Sui Shot</h1>
+        <p className="sub">Take the shot, not the risk. Win from yield, not from losses.</p>
         <div className="tabs">
           <button
             className={`tab-btn ${activeTab === 'markets' ? 'active' : ''}`}

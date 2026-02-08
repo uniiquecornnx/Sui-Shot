@@ -20,6 +20,10 @@ export type OnchainMarket = {
   closeTimestampMs: number;
   mode: number;
   manualSide: number;
+  predictionNetwork: string;
+  predictionTokenAddress: string;
+  predictionTargetPriceE6: number;
+  predictionComparator: number;
   totalYes: number;
   totalNo: number;
   yieldPool: number;
@@ -58,6 +62,10 @@ export function useOnchainMarkets() {
             closeTimestampMs: asNumber(readField(r, 'close_timestamp_ms', 'closeTimestampMs')),
             mode: asNumber(readField(r, 'mode', 'mode')),
             manualSide: asNumber(readField(r, 'manual_side', 'manualSide')),
+            predictionNetwork: String(readField(r, 'prediction_network', 'predictionNetwork') ?? ''),
+            predictionTokenAddress: String(readField(r, 'prediction_token_address', 'predictionTokenAddress') ?? ''),
+            predictionTargetPriceE6: asNumber(readField(r, 'prediction_target_price_e6', 'predictionTargetPriceE6')),
+            predictionComparator: asNumber(readField(r, 'prediction_comparator', 'predictionComparator')),
             totalYes: asNumber(readField(r, 'total_yes', 'totalYes')),
             totalNo: asNumber(readField(r, 'total_no', 'totalNo')),
             yieldPool: asNumber(readField(r, 'yield_pool', 'yieldPool')),
@@ -86,6 +94,10 @@ export function useOnchainMarkets() {
             closeTimestampMs: asNumber(readField(json, 'close_timestamp_ms', 'closeTimestampMs')),
             mode: asNumber(readField(json, 'mode', 'mode')),
             manualSide: asNumber(readField(json, 'manual_side', 'manualSide')),
+            predictionNetwork: '',
+            predictionTokenAddress: '',
+            predictionTargetPriceE6: asNumber(readField(json, 'prediction_target_price_e6', 'predictionTargetPriceE6')),
+            predictionComparator: asNumber(readField(json, 'prediction_comparator', 'predictionComparator')),
             totalYes: 0,
             totalNo: 0,
             yieldPool: 0,
