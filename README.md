@@ -155,7 +155,6 @@ Moves accrued strategy yield into a selected round’s prize pool.
 
 Path: `/sui-zeroloss-prediction-market/frontend`
 
-Create `.env`:
 
 Run:
 
@@ -213,13 +212,5 @@ Wallet connect, portfolio tracking, strategy controls, and live chain data.
 4. **Extensible strategy architecture**
 Current simulated strategy can be swapped for a real lending adapter (SuiLend or other) without changing product concept.
 
-## Next Up
 
-- Replace simulated strategy with live yield adapter
-- Add VRF randomness
-- Add backend indexer for analytics and leaderboards
-- Add automation/keeper service for scheduled accrual and settlement
-
----
-
-If you share your final demo transactions + screenshots, they can be added in a `Proof of Functionality` section exactly like the OmniLotto style.
+Hackmoney2026 submission
